@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="12dp">
+
+    <TextView
+        android:id="@+id/tvError"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/holo_red_dark"
+        android:visibility="gone"
+        android:text="Error"
+        />
+
+    <EditText
+        android:id="@+id/etSessionId"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:hint="Session ID"
+        />
+
+    <EditText
+        android:id="@+id/etQrValue"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:hint="QR Value (or scan)"
+        />
+
+    <Button
+        android:id="@+id/btnScanQr"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Scan QR"/>
+
+    <Button
+        android:id="@+id/btnGetLocation"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Get Location"/>
+
+    <TextView
+        android:id="@+id/tvLocation"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Location: -"/>
+
+    <TextView
+        android:id="@+id/tvIntegrity"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Integrity: -"/>
+
+    <Button
+        android:id="@+id/btnSubmit"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Submit Attendance"/>
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:visibility="gone"/>
+
+    <!-- Simple constraints: use a vertical chain -->
+</androidx.constraintlayout.widget.ConstraintLayout>

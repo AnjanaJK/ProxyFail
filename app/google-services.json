@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1072274141842",
+    "project_id": "project-proxyfail",
+    "storage_bucket": "project-proxyfail.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1072274141842:android:92c0b70f118f755dde2c4b",
+        "android_client_info": {
+          "package_name": "com.proxyfail.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDPXbMf1c8Fz0CtPxMKRTGHwP_cFNJH-3A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
