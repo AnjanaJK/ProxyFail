@@ -1,68 +1,292 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="12dp">
+    android:background="#F5F7FA"
+    android:padding="20dp">
 
-    <TextView
-        android:id="@+id/tvError"
+    <!-- Error Card -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardError"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textColor="@android:color/holo_red_dark"
         android:visibility="gone"
-        android:text="Error"
-        />
+        app:cardBackgroundColor="#FFEBEE"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="2dp"
+        app:strokeColor="#EF5350"
+        app:strokeWidth="1dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/cardStatus">
 
-    <EditText
-        android:id="@+id/etSessionId"
+        <TextView
+            android:id="@+id/tvError"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="16dp"
+            android:textColor="#C62828"
+            android:textSize="14sp"
+            android:drawablePadding="8dp"
+            android:drawableStart="@android:drawable/ic_dialog_alert"
+            android:drawableTint="#C62828"
+            android:text="Error"
+            tools:visibility="visible"/>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Status Card -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardStatus"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:hint="Session ID"
-        />
+        android:layout_marginTop="16dp"
+        app:cardBackgroundColor="@android:color/white"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="4dp"
+        app:layout_constraintTop_toBottomOf="@id/cardError"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/cardInput">
 
-    <EditText
-        android:id="@+id/etQrValue"
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Status Overview"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#1A237E"
+                android:layout_marginBottom="16dp"/>
+
+            <TextView
+                android:id="@+id/tvSessionStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Session Status: Loading..."
+                android:textStyle="bold"
+                android:textSize="15sp"
+                android:textColor="#283593"
+                android:drawableStart="@android:drawable/ic_menu_info_details"
+                android:drawablePadding="12dp"
+                android:drawableTint="#5C6BC0"
+                android:padding="8dp"
+                android:background="@android:drawable/dialog_holo_light_frame"
+                android:backgroundTint="#E8EAF6"
+                android:layout_marginBottom="12dp"/>
+
+            <TextView
+                android:id="@+id/tvIntegrity"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Integrity: Checking..."
+                android:textSize="14sp"
+                android:textColor="#37474F"
+                android:drawableStart="@android:drawable/ic_menu_compass"
+                android:drawablePadding="12dp"
+                android:drawableTint="#78909C"
+                android:padding="8dp"
+                android:layout_marginBottom="12dp"/>
+
+            <TextView
+                android:id="@+id/tvBeacon"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Beacon Status: Idle"
+                android:textSize="14sp"
+                android:textColor="#37474F"
+                android:drawableStart="@android:drawable/ic_menu_mylocation"
+                android:drawablePadding="12dp"
+                android:drawableTint="#78909C"
+                android:padding="8dp"
+                android:layout_marginBottom="12dp"/>
+
+            <TextView
+                android:id="@+id/tvLocation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Location: -"
+                android:textSize="14sp"
+                android:textColor="#37474F"
+                android:drawableStart="@android:drawable/ic_dialog_map"
+                android:drawablePadding="12dp"
+                android:drawableTint="#78909C"
+                android:padding="8dp"/>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Input Card -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardInput"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:hint="QR Value (or scan)"
-        />
+        android:layout_marginTop="16dp"
+        app:cardBackgroundColor="@android:color/white"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="4dp"
+        app:layout_constraintTop_toBottomOf="@id/cardStatus"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/progressBar">
 
-    <Button
-        android:id="@+id/btnScanQr"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Scan QR"/>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
 
-    <Button
-        android:id="@+id/btnGetLocation"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Get Location"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Attendance Submission"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#1A237E"
+                android:layout_marginBottom="16dp"/>
 
-    <TextView
-        android:id="@+id/tvLocation"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="Location: -"/>
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Session ID"
+                app:boxBackgroundMode="outline"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusBottomEnd="12dp"
+                app:boxStrokeColor="#5C6BC0"
+                app:hintTextColor="#5C6BC0"
+                android:layout_marginBottom="12dp">
 
-    <TextView
-        android:id="@+id/tvIntegrity"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="Integrity: -"/>
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etSessionId"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:textSize="15sp"
+                    android:textColor="#263238"/>
+            </com.google.android.material.textfield.TextInputLayout>
 
-    <Button
-        android:id="@+id/btnSubmit"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="Submit Attendance"/>
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="QR Value"
+                app:boxBackgroundMode="outline"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusBottomEnd="12dp"
+                app:boxStrokeColor="#5C6BC0"
+                app:hintTextColor="#5C6BC0"
+                app:endIconMode="clear_text"
+                android:layout_marginBottom="16dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etQrValue"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="text"
+                    android:textSize="15sp"
+                    android:textColor="#263238"/>
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:weightSum="2"
+                android:layout_marginBottom="16dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnScanQr"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:text="Scan QR"
+                    android:textSize="14sp"
+                    android:textAllCaps="false"
+                    app:icon="@android:drawable/ic_menu_camera"
+                    app:iconGravity="textStart"
+                    app:iconSize="20dp"
+                    app:cornerRadius="12dp"
+                    app:backgroundTint="#5C6BC0"
+                    android:elevation="2dp"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnGetLocation"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout_weight="1"
+                    android:layout_marginStart="6dp"
+                    android:text="Location"
+                    android:textSize="14sp"
+                    android:textAllCaps="false"
+                    app:icon="@android:drawable/ic_menu_mylocation"
+                    app:iconGravity="textStart"
+                    app:iconSize="20dp"
+                    app:cornerRadius="12dp"
+                    app:backgroundTint="#7E57C2"
+                    android:elevation="2dp"/>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/statusText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Waiting for scan..."
+                android:textSize="14sp"
+                android:textColor="#78909C"
+                android:textStyle="italic"
+                android:gravity="center"
+                android:padding="12dp"
+                android:layout_marginBottom="8dp"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSubmit"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="Submit Attendance"
+                android:textSize="16sp"
+                android:textAllCaps="false"
+                android:textStyle="bold"
+                app:icon="@android:drawable/ic_menu_send"
+                app:iconGravity="textStart"
+                app:cornerRadius="12dp"
+                app:backgroundTint="#43A047"
+                android:elevation="4dp"/>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
     <ProgressBar
         android:id="@+id/progressBar"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:visibility="gone"/>
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:visibility="gone"
+        android:indeterminateTint="#5C6BC0"
+        app:layout_constraintTop_toBottomOf="@id/cardInput"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/rvSessions"/>
 
-    <!-- Simple constraints: use a vertical chain -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvSessions"
+        android:layout_width="0dp"
+        android:layout_height="120dp"
+        android:visibility="visible"
+        app:layout_constraintTop_toBottomOf="@id/progressBar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginTop="8dp"
+        android:background="#FFFFFF"
+        android:padding="8dp" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

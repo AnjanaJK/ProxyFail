@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ProxyFailApp</string>
+    <string-array name="user_roles">
+        <item>Student</item>
+        <item>Teacher</item>
+    </string-array>
+
 </resources>

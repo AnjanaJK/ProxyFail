@@ -1,3 +1,5 @@
+30/10/2025
+
 package com.proxyfail.app;
 
 import android.Manifest;
@@ -10,28 +12,26 @@ import android.graphics.Bitmap;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -43,7 +43,6 @@ public class TeacherDashboardActivity extends AppCompatActivity {
     private MaterialButton btnStartSession, btnEndSession, btnSignOut, btnScheduleNotifications, btnViewAttendance;
     private ImageView qrImage;
     private TextView tvSessionStatus, tvBeaconStatus;
-    private TextView tvBeaconDevice, tvBeaconUuid, tvServiceDataHex, tvTxPower, tvAdvertiseMode, tvConnectable;
     private ProgressBar progressBar;
 
     private FirebaseAuth auth;
@@ -52,19 +51,6 @@ public class TeacherDashboardActivity extends AppCompatActivity {
     private String activeSessionId = null;
     private String courseId = "CS401-FALL25";
     private boolean isBeaconRunning = false;
-
-    // Permission launcher for Bluetooth advertising (Android 12+)
-    private final ActivityResultLauncher<String> bluetoothPermissionLauncher = registerForActivityResult(
-            new ActivityResultContracts.RequestPermission(), isGranted -> {
-                if (isGranted) {
-                    // Permission granted, we can start the session
-                    startSession();
-                } else {
-                    // Permission denied, show a message to the user
-                    Toast.makeText(this, "Bluetooth permission is required to start the session.", Toast.LENGTH_LONG)
-                            .show();
-                }
-            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,36 +68,33 @@ public class TeacherDashboardActivity extends AppCompatActivity {
         qrImage = findViewById(R.id.qrImage);
         tvSessionStatus = findViewById(R.id.tvSessionStatus);
         tvBeaconStatus = findViewById(R.id.tvBeaconStatus);
-
-        // NEW fields (must exist in activity_teacher_dashboard.xml)
-        tvBeaconDevice = findViewById(R.id.tvBeaconDevice);
-        tvBeaconUuid = findViewById(R.id.tvBeaconUuid);
-        tvServiceDataHex = findViewById(R.id.tvServiceDataHex);
-        tvTxPower = findViewById(R.id.tvTxPower);
-        tvAdvertiseMode = findViewById(R.id.tvAdvertiseMode);
-        tvConnectable = findViewById(R.id.tvConnectable);
-
         progressBar = findViewById(R.id.progressBar);
 
         btnStartSession.setOnClickListener(v -> startSession());
         btnEndSession.setOnClickListener(v -> endSession());
         btnSignOut.setOnClickListener(v -> handleSignOut());
-        btnScheduleNotifications
-                .setOnClickListener(v -> startActivity(new Intent(this, CalendarNotificationActivity.class)));
+        btnScheduleNotifications.setOnClickListener(v -> startActivity(new Intent(this, CalendarNotificationActivity.class)));
         btnViewAttendance.setOnClickListener(v -> {
             Intent i = new Intent(this, TeacherAttendanceReviewActivity.class);
-            if (activeSessionId != null)
-                i.putExtra("SESSION_ID", activeSessionId);
+            if (activeSessionId != null) i.putExtra("SESSION_ID", activeSessionId);
             startActivity(i);
         });
 
         updateBeaconStatus(false);
         btnEndSession.setEnabled(false);
+
+        // Save teacher FCM token
+        FirebaseMessaging.getInstance().getToken()
+                .addOnSuccessListener(token -> {
+                    db.collection("users").document(auth.getUid())
+                            .update("fcmToken", token)
+                            .addOnSuccessListener(a -> Log.d(TAG, "Teacher FCM token saved"))
+                            .addOnFailureListener(e -> Log.e(TAG, "Failed to save FCM token", e));
+                });
     }
 
     private void handleSignOut() {
-        if (isBeaconRunning)
-            stopBeaconAdvertising();
+        if (isBeaconRunning) stopBeaconAdvertising();
         activeSessionId = null;
         isBeaconRunning = false;
         updateBeaconStatus(false);
@@ -128,17 +111,12 @@ public class TeacherDashboardActivity extends AppCompatActivity {
             return;
         }
 
-        // Check Bluetooth advertising permission (Android 12+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (ContextCompat.checkSelfPermission(this,
-                    Manifest.permission.BLUETOOTH_ADVERTISE) != PackageManager.PERMISSION_GRANTED) {
-                bluetoothPermissionLauncher.launch(Manifest.permission.BLUETOOTH_ADVERTISE);
-                return;
-            }
+        if (!checkBeaconPermissions()) {
+            requestBeaconPermissions();
+            return;
         }
 
-        if (progressBar != null)
-            progressBar.setVisibility(ProgressBar.VISIBLE);
+        if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
         String qrCodeValue = "QR-" + UUID.randomUUID().toString().substring(0, 8);
 
         Map<String, Object> session = new HashMap<>();
@@ -148,52 +126,25 @@ public class TeacherDashboardActivity extends AppCompatActivity {
         session.put("isActive", true);
         session.put("teacherId", user.getUid());
         session.put("createdAt", FieldValue.serverTimestamp());
+        // ✅ Added location field (important!)
+        session.put("location", new HashMap<String, Object>() {{
+            put("latitude", 40.7128);
+            put("longitude", -74.0060);
+        }});
 
         db.collection("sessions").add(session)
                 .addOnSuccessListener(docRef -> {
                     activeSessionId = docRef.getId();
                     generateQRCode(qrCodeValue);
-
-                    // Persist the required beacon serviceData (we use session id as serviceData)
-                    final String serviceDataAscii = activeSessionId;
-                    final String serviceDataHex = bytesToHex(serviceDataAscii.getBytes());
-
-                    docRef.update("requiredBeaconServiceUuid", BEACON_UUID,
-                            "requiredBeaconSessionData", serviceDataAscii)
-                            .addOnSuccessListener(a -> Log.d(TAG, "Session doc updated with beacon info"))
-                            .addOnFailureListener(e -> Log.w(TAG, "Failed to update session with beacon info", e));
-
-                    // Update the UI with exact values for nRF Connect
-                    if (tvBeaconUuid != null)
-                        tvBeaconUuid.setText("Beacon UUID: " + BEACON_UUID);
-                    if (tvServiceDataHex != null)
-                        tvServiceDataHex.setText("ServiceData (hex): " + serviceDataHex);
-                    if (tvTxPower != null)
-                        tvTxPower.setText("TX Power: HIGH");
-                    if (tvAdvertiseMode != null)
-                        tvAdvertiseMode.setText("Advertise Mode: LOW_LATENCY");
-                    if (tvConnectable != null)
-                        tvConnectable.setText("Connectable: false");
-
-                    // Try to display Bluetooth adapter address (may be restricted on Android S+)
-                    if (tvBeaconDevice != null)
-                        tvBeaconDevice.setText("Device: " + getLocalBluetoothAddress());
-
-                    // Start advertising via in-app service (extras include service UUID and session
-                    // data)
                     startBeaconAdvertising();
-
-                    if (progressBar != null)
-                        progressBar.setVisibility(ProgressBar.GONE);
+                    if (progressBar != null) progressBar.setVisibility(View.GONE);
                     tvSessionStatus.setText("Session Active: " + activeSessionId);
                     btnEndSession.setEnabled(true);
                     Toast.makeText(this, "Session & Beacon started!", Toast.LENGTH_SHORT).show();
                 })
                 .addOnFailureListener(e -> {
-                    if (progressBar != null)
-                        progressBar.setVisibility(ProgressBar.GONE);
+                    if (progressBar != null) progressBar.setVisibility(View.GONE);
                     Log.e(TAG, "Failed to start session", e);
-                    Toast.makeText(this, "Failed to start session: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 });
     }
 
@@ -203,43 +154,57 @@ public class TeacherDashboardActivity extends AppCompatActivity {
             return;
         }
 
-        if (progressBar != null)
-            progressBar.setVisibility(ProgressBar.VISIBLE);
+        if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
         DocumentReference ref = db.collection("sessions").document(activeSessionId);
         ref.update("isActive", false, "endedAt", FieldValue.serverTimestamp())
                 .addOnSuccessListener(aVoid -> {
                     stopBeaconAdvertising();
-                    if (progressBar != null)
-                        progressBar.setVisibility(ProgressBar.GONE);
+                    if (progressBar != null) progressBar.setVisibility(View.GONE);
                     tvSessionStatus.setText("Session ended.");
                     qrImage.setImageBitmap(null);
                     btnEndSession.setEnabled(false);
                     activeSessionId = null;
                 })
                 .addOnFailureListener(e -> {
-                    if (progressBar != null)
-                        progressBar.setVisibility(ProgressBar.GONE);
+                    if (progressBar != null) progressBar.setVisibility(View.GONE);
                     Log.e(TAG, "Failed to end session", e);
-                    Toast.makeText(this, "Failed to end session: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 });
     }
 
-    private void startBeaconAdvertising() {
-        // Use the existing BeaconAdvertiserService (it reads extras for service UUID
-        // and session data)
-        startServiceWithExtras();
-        isBeaconRunning = true;
-        updateBeaconStatus(true);
+    private boolean checkBeaconPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+            return ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED;
+        return true;
     }
 
-    private void startServiceWithExtras() {
+    private void requestBeaconPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (!shouldShowRequestPermissionRationale(Manifest.permission.BLUETOOTH_ADVERTISE))
+                Toast.makeText(this, "Bluetooth permission is needed for beacon advertising.", Toast.LENGTH_LONG).show();
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.BLUETOOTH_ADVERTISE}, 200);
+        }
+    }
+
+    private void startBeaconAdvertising() {
+        BluetoothManager bm = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        if (bm == null) return;
+        BluetoothAdapter adapter = bm.getAdapter();
+        if (adapter == null || !adapter.isEnabled()) {
+            Toast.makeText(this, "Enable Bluetooth to start beacon", Toast.LENGTH_LONG).show();
+            return;
+        }
+        if (!adapter.isMultipleAdvertisementSupported()) {
+            Toast.makeText(this, "Device doesn’t support BLE advertising", Toast.LENGTH_LONG).show();
+            return;
+        }
+
         Intent i = new Intent(this, BeaconAdvertiserService.class);
-        i.putExtra("EXTRA_SERVICE_UUID", BEACON_UUID); // matches service key used in BeaconAdvertiserService
-        i.putExtra("EXTRA_SESSION_DATA", activeSessionId); // teacher's session id used as serviceData
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-            startForegroundService(i);
-        else
-            startService(i);
+        i.putExtra(BeaconAdvertiserService.EXTRA_SERVICE_UUID, BEACON_UUID);
+        i.putExtra(BeaconAdvertiserService.EXTRA_SESSION_DATA, activeSessionId);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(i);
+        else startService(i);
+        isBeaconRunning = true;
+        updateBeaconStatus(true);
     }
 
     private void stopBeaconAdvertising() {
@@ -270,45 +235,9 @@ public class TeacherDashboardActivity extends AppCompatActivity {
         }
     }
 
-    // Helper: convert bytes to lowercase hex string (no separators)
-    private static String bytesToHex(byte[] bytes) {
-        if (bytes == null || bytes.length == 0)
-            return "";
-        StringBuilder sb = new StringBuilder(bytes.length * 2);
-        for (byte b : bytes) {
-            sb.append(String.format("%02x", b & 0xff));
-        }
-        return sb.toString();
-    }
-
-    // Helper: attempt to read local Bluetooth adapter address (may be restricted on
-    // Android S+)
-    private String getLocalBluetoothAddress() {
-        try {
-            BluetoothManager bm = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-            if (bm == null)
-                return "N/A";
-            BluetoothAdapter adapter = bm.getAdapter();
-            if (adapter == null)
-                return "N/A";
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (ActivityCompat.checkSelfPermission(this,
-                        Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                    return "BLUETOOTH_CONNECT required";
-                }
-            }
-            String addr = adapter.getAddress();
-            return addr == null ? "unknown" : addr;
-        } catch (Exception e) {
-            Log.w(TAG, "Failed to read Bluetooth address", e);
-            return "unknown";
-        }
-    }
-
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (isBeaconRunning)
-            stopBeaconAdvertising();
+        if (isBeaconRunning) stopBeaconAdvertising();
     }
 }

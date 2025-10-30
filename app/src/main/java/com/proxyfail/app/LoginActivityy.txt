@@ -2,9 +2,9 @@ package com.proxyfail.app;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
+import android.util.Log;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -12,43 +12,48 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FieldValue;
-import com.google.firebase.messaging.FirebaseMessaging;
-
 import java.util.HashMap;
 import java.util.Map;
-
 import com.proxyfail.app.databinding.ActivityLoginBinding;
 
 public class LoginActivity extends AppCompatActivity {
+
     private ActivityLoginBinding binding;
     private FirebaseAuth auth;
     private FirebaseFirestore db;
     private FirebaseAuth.AuthStateListener authStateListener;
     private boolean isRedirecting = false;
-    private static final String TAG = "LoginActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Initialize Firebase
         auth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
+
         binding = ActivityLoginBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        // 🔹 If user already logged in → route to correct dashboard
         FirebaseUser user = auth.getCurrentUser();
         if (user != null) {
+            // Use auth state listener below for consistent handling, but perform a fast redirect once here
             isRedirecting = true;
             redirectBasedOnRole(user.getUid());
             return;
         }
 
+        // 🔹 Login button
         binding.btnLogin.setOnClickListener(v -> {
             String email = binding.etEmail.getText().toString().trim();
             String pass = binding.etPassword.getText().toString().trim();
+
             if (email.isEmpty() || pass.isEmpty()) {
                 Toast.makeText(this, "Enter email & password", Toast.LENGTH_SHORT).show();
                 return;
             }
+
             binding.progressBar.setVisibility(View.VISIBLE);
             auth.signInWithEmailAndPassword(email, pass)
                     .addOnCompleteListener(task -> {
@@ -57,27 +62,27 @@ public class LoginActivity extends AppCompatActivity {
                             FirebaseUser u = auth.getCurrentUser();
                             if (u != null) {
                                 Toast.makeText(this, "Welcome " + u.getEmail(), Toast.LENGTH_SHORT).show();
-                                Log.d(TAG, "signInWithEmail: success for uid=" + u.getUid());
-
-                                // ✅ Register FCM token on login
-                                registerFcmToken(u.getUid());
-
+                                Log.d("LoginActivity", "signInWithEmail: success for uid=" + u.getUid());
                                 if (!isRedirecting) {
                                     isRedirecting = true;
                                     redirectBasedOnRole(u.getUid());
+                                } else {
+                                    Log.d("LoginActivity", "Already redirecting, skipping duplicate redirect");
                                 }
                             }
                         } else {
-                            Log.w(TAG, "signInWithEmail: failed", task.getException());
+                            Log.w("LoginActivity", "signInWithEmail: failed", task.getException());
                             Toast.makeText(this, "Login failed: " + task.getException().getMessage(),
                                     Toast.LENGTH_LONG).show();
                         }
                     });
         });
 
+        // 🔹 Register button → open proper RegisterActivity
         binding.btnRegister.setOnClickListener(v ->
                 startActivity(new Intent(LoginActivity.this, RegisterActivity.class)));
 
+        // wire forgot-password (replace binding.tvForgotPassword with your actual view id if different)
         binding.tvForgotPassword.setOnClickListener(v -> {
             String email = binding.etEmail.getText().toString().trim();
             if (email.isEmpty()) {
@@ -90,7 +95,7 @@ public class LoginActivity extends AppCompatActivity {
                         .setPositiveButton("Send", (dlg, which) -> {
                             String e = input.getText().toString().trim();
                             if (e.isEmpty()) {
-                                Toast.makeText(this, "Enter an email", Toast.LENGTH_SHORT).show();
+                                android.widget.Toast.makeText(this, "Enter an email", android.widget.Toast.LENGTH_SHORT).show();
                                 return;
                             }
                             sendResetEmail(e);
@@ -103,26 +108,7 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
-    private void registerFcmToken(String uid) {
-        FirebaseMessaging.getInstance().getToken()
-                .addOnCompleteListener(task -> {
-                    if (!task.isSuccessful()) {
-                        Log.w(TAG, "Fetching FCM token failed", task.getException());
-                        return;
-                    }
-                    String token = task.getResult();
-                    if (token != null) {
-                        Map<String, Object> data = new HashMap<>();
-                        data.put("uid", uid);
-                        data.put("createdAt", FieldValue.serverTimestamp());
-                        db.collection("deviceTokens").document(token)
-                                .set(data)
-                                .addOnSuccessListener(aVoid -> Log.d(TAG, "FCM token registered for uid: " + uid))
-                                .addOnFailureListener(e -> Log.e(TAG, "Failed to register FCM token", e));
-                    }
-                });
-    }
-
+    // 🔹 Function to check role and redirect
     private void redirectBasedOnRole(String uid) {
         db.collection("users").document(uid).get()
                 .addOnSuccessListener(document -> {
@@ -137,12 +123,15 @@ public class LoginActivity extends AppCompatActivity {
                         startActivity(intent);
                         finish();
                     } else {
-                        Log.w(TAG, "User profile not found for uid=" + uid + ". Creating minimal student profile.");
+                        Log.w("LoginActivity", "User profile not found for uid=" + uid + ". Creating minimal student profile.");
+                        // If the user was created in Auth but no profile exists in Firestore,
+                        // create a minimal student profile so the app can proceed.
                         Map<String, Object> profile = new HashMap<>();
                         profile.put("email", auth.getCurrentUser() != null ? auth.getCurrentUser().getEmail() : "");
                         profile.put("name", "");
                         profile.put("role", "student");
                         profile.put("createdAt", FieldValue.serverTimestamp());
+
                         db.collection("users").document(uid).set(profile)
                                 .addOnSuccessListener(aVoid -> {
                                     Toast.makeText(this, "Profile created; continuing as student", Toast.LENGTH_SHORT).show();
@@ -151,8 +140,8 @@ public class LoginActivity extends AppCompatActivity {
                                     finish();
                                 })
                                 .addOnFailureListener(e -> {
-                                    Log.e(TAG, "Failed to create user profile for uid=" + uid, e);
-                                    Toast.makeText(this, "User profile creation failed.", Toast.LENGTH_LONG).show();
+                                    Log.e("LoginActivity", "Failed to create user profile for uid=" + uid, e);
+                                    Toast.makeText(this, "User profile not found and creation failed.", Toast.LENGTH_LONG).show();
                                 });
                     }
                 })
@@ -176,9 +165,10 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        // install an AuthStateListener to detect unexpected sign-outs
         authStateListener = firebaseAuth -> {
             FirebaseUser user = firebaseAuth.getCurrentUser();
-            Log.d(TAG, "AuthState changed. user=" + (user == null ? "null" : user.getUid()));
+            Log.d("LoginActivity", "AuthState changed. user=" + (user == null ? "null" : user.getUid()));
             if (user != null && !isRedirecting) {
                 isRedirecting = true;
                 redirectBasedOnRole(user.getUid());
