@@ -188,7 +188,14 @@ public class TeacherActivity extends AppCompatActivity {
 
         // Start the beacon service
         try {
+//            Intent serviceIntent = new Intent(this, BeaconAdvertiserService.class);
+//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//                startForegroundService(serviceIntent);
+//            } else {
+//                startService(serviceIntent);
+//            }
             Intent serviceIntent = new Intent(this, BeaconAdvertiserService.class);
+            serviceIntent.putExtra("sessionId", currentSessionId); // 🔹 replace with your session variable name
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 startForegroundService(serviceIntent);
             } else {
