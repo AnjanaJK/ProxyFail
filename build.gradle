@@ -1,0 +1,18 @@
+// Minimal root build.gradle for beacon-only sample
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        // Updated to AGP 8.1.0 to support compileSdk 34
+        classpath 'com.android.tools.build:gradle:8.1.0'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
