@@ -111,9 +111,6 @@ public class MainActivity extends Activity {
             startActivity(new Intent(this, CalibrationActivity.class));
         });
 
-        Button btnTuning = findViewById(R.id.btnTuning);
-        btnTuning.setOnClickListener(v -> startActivity(new Intent(this, TuningActivity.class)));
-
         prefs = getSharedPreferences("beacon_prefs", MODE_PRIVATE);
         radarView = findViewById(R.id.radarView);
 
@@ -122,23 +119,6 @@ public class MainActivity extends Activity {
             btnToggleTelemetry.setText(telemetryEnabled ? "Telemetry: ON" : "Telemetry: OFF");
             appendLog("Telemetry " + (telemetryEnabled ? "enabled" : "disabled"));
         });
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        // reload tuning prefs and apply to scanner
-        float emaRise = prefs.getFloat("ema_rise", 0.6f);
-        float emaFall = prefs.getFloat("ema_fall", 0.25f);
-        int close = prefs.getInt("close_threshold", -65);
-        int far = prefs.getInt("far_threshold", -80);
-        int consec = prefs.getInt("consecutive_required", 2);
-        // apply
-        if (scanner != null) {
-            scanner.setEmaAlphas(emaRise, emaFall);
-            scanner.setThresholds(close, far);
-            scanner.setConsecutiveRequired(consec);
-        }
     }
 
     private void appendLog(String s) {

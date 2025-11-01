@@ -37,8 +37,5 @@
         <!-- Calibration helper activity -->
         <activity android:name="com.proxyfail.app.CalibrationActivity" android:exported="false" />
 
-        <!-- Tuning activity (debug/admin) -->
-        <activity android:name="com.proxyfail.app.TuningActivity" android:exported="false" />
-
     </application>
 </manifest>
