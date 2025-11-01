@@ -38,9 +38,9 @@ public class CalibrationActivity extends Activity {
             }
 
             @Override
-            public void onProximityUpdate(int rawRssi, double smoothedRssi, String decision, int[] recentSamples) {
+            public void onProximityUpdate(int rawRssi, double smoothedRssi, int median, String decision, int[] recentSamples) {
                 // collect recent samples into our list
-                runOnUiThread(() -> tvStatus.append("Calib rssi: " + rawRssi + " smoothed:" + String.format("%.1f", smoothedRssi) + "\n"));
+                runOnUiThread(() -> tvStatus.append("Calib rssi: " + rawRssi + " smoothed:" + String.format("%.1f", smoothedRssi) + " median:" + median + "\n"));
                 synchronized (collected) {
                     for (int s : recentSamples) collected.add(s);
                 }

@@ -53,22 +53,20 @@ public class MainActivity extends Activity {
             public void onScanError(String reason) {
                 appendLog("Scan error: " + reason);
             }
-
             @Override
-            public void onProximityUpdate(int rawRssi, double smoothedRssi, String decision, int[] recentSamples) {
+            public void onProximityUpdate(int rawRssi, double smoothedRssi, int median, String decision, int[] recentSamples) {
                 runOnUiThread(() -> {
                     tvRawRssi.setText("Raw RSSI: " + rawRssi);
-                    tvSmoothedRssi.setText(String.format("Smoothed RSSI: %.1f", smoothedRssi));
-                    // compute approximate distance using calibrated tx power (median at 1m)
+                    tvSmoothedRssi.setText(String.format("Smoothed RSSI: %.1f (median %d)", smoothedRssi, median));
+                    // compute approximate distance using median of recent samples (more responsive)
                     int tx = prefs.getInt("calibrated_tx_power", -59);
                     double n = 2.0; // path-loss exponent (environment)
-                    double distance = Math.pow(10.0, (tx - smoothedRssi) / (10.0 * n));
+                    double distance = Math.pow(10.0, (tx - median) / (10.0 * n));
                     // cap unrealistic values for display
                     if (Double.isNaN(distance) || distance > 50) distance = Double.POSITIVE_INFINITY;
                     String distText = Double.isFinite(distance) ? String.format(" (%.2fm)", distance) : "";
                     tvProximity.setText("Proximity: " + decision + distText);
                     if (radarView != null) {
-                        // set a reasonable max mapping so the radar fits
                         radarView.setMaxMeters(6f);
                         radarView.setDistanceMeters(Double.isFinite(distance) ? distance : -1);
                     }
@@ -113,6 +111,9 @@ public class MainActivity extends Activity {
             startActivity(new Intent(this, CalibrationActivity.class));
         });
 
+        Button btnTuning = findViewById(R.id.btnTuning);
+        btnTuning.setOnClickListener(v -> startActivity(new Intent(this, TuningActivity.class)));
+
         prefs = getSharedPreferences("beacon_prefs", MODE_PRIVATE);
         radarView = findViewById(R.id.radarView);
 
@@ -121,6 +122,23 @@ public class MainActivity extends Activity {
             btnToggleTelemetry.setText(telemetryEnabled ? "Telemetry: ON" : "Telemetry: OFF");
             appendLog("Telemetry " + (telemetryEnabled ? "enabled" : "disabled"));
         });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // reload tuning prefs and apply to scanner
+        float emaRise = prefs.getFloat("ema_rise", 0.6f);
+        float emaFall = prefs.getFloat("ema_fall", 0.25f);
+        int close = prefs.getInt("close_threshold", -65);
+        int far = prefs.getInt("far_threshold", -80);
+        int consec = prefs.getInt("consecutive_required", 2);
+        // apply
+        if (scanner != null) {
+            scanner.setEmaAlphas(emaRise, emaFall);
+            scanner.setThresholds(close, far);
+            scanner.setConsecutiveRequired(consec);
+        }
     }
 
     private void appendLog(String s) {

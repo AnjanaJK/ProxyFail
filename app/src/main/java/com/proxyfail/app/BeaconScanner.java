@@ -30,13 +30,13 @@ public class BeaconScanner {
     private int bufferPos = 0;
     private int bufferCount = 0;
     private double ema = Double.NaN;
-    // asymmetric EMA: faster when RSSI rises (approach), slower when falling (avoid noise)
-    private final double EMA_ALPHA_RISE = 0.6;
-    private final double EMA_ALPHA_FALL = 0.25;
+    // configurable EMA and thresholds (defaults)
+    private double emaAlphaRise = 0.6;
+    private double emaAlphaFall = 0.25;
     private int consecutiveCloseCount = 0;
-    private final int CONSECUTIVE_REQUIRED = 2; // be a bit more responsive
-    private final int CLOSE_THRESHOLD = -65;
-    private final int FAR_THRESHOLD = -80;
+    private int consecutiveRequired = 2; // default
+    private int closeThreshold = -65;
+    private int farThreshold = -80;
     private boolean telemetryEnabled = false;
 
     // scan loop control (short windows with small pause) so UI stays responsive
@@ -48,7 +48,8 @@ public class BeaconScanner {
     public interface Listener {
         void onBeaconFound(String payload, int rssi);
         void onScanError(String reason);
-        void onProximityUpdate(int rawRssi, double smoothedRssi, String decision, int[] recentSamples);
+        // median is the median of recent raw samples (robust to spikes)
+        void onProximityUpdate(int rawRssi, double smoothedRssi, int median, String decision, int[] recentSamples);
     }
 
     public BeaconScanner(Context ctx, Listener listener) {
@@ -86,9 +87,9 @@ public class BeaconScanner {
         if (Double.isNaN(ema)) ema = rssi;
         else {
             if (rssi > ema) {
-                ema = EMA_ALPHA_RISE * rssi + (1 - EMA_ALPHA_RISE) * ema;
+                ema = emaAlphaRise * rssi + (1 - emaAlphaRise) * ema;
             } else {
-                ema = EMA_ALPHA_FALL * rssi + (1 - EMA_ALPHA_FALL) * ema;
+                ema = emaAlphaFall * rssi + (1 - emaAlphaFall) * ema;
             }
         }
 
@@ -100,19 +101,34 @@ public class BeaconScanner {
         // decision logic
         String decision;
         // consecutive logic: require a small run of close readings, reset quickly when below close
-        if (ema >= CLOSE_THRESHOLD) {
+        if (ema >= closeThreshold) {
             consecutiveCloseCount++;
         } else {
             consecutiveCloseCount = 0;
         }
 
-        if (consecutiveCloseCount >= CONSECUTIVE_REQUIRED) decision = "close";
-        else if (ema < FAR_THRESHOLD) decision = "far";
+        if (consecutiveCloseCount >= consecutiveRequired) decision = "close";
+        else if (ema < farThreshold) decision = "far";
         else decision = "uncertain";
 
         // notify listener
         listener.onBeaconFound(payload, rssi);
-        listener.onProximityUpdate(rssi, ema, decision, samples);
+        listener.onProximityUpdate(rssi, ema, median, decision, samples);
+    }
+
+    // setters so tuning UI can apply values at runtime
+    public void setEmaAlphas(double rise, double fall) {
+        this.emaAlphaRise = rise;
+        this.emaAlphaFall = fall;
+    }
+
+    public void setThresholds(int close, int far) {
+        this.closeThreshold = close;
+        this.farThreshold = far;
+    }
+
+    public void setConsecutiveRequired(int n) {
+        this.consecutiveRequired = n;
     }
 
     private int computeMedian(int[] arr) {
