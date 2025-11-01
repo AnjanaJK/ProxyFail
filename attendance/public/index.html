@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Proxyfail Attendance</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; margin: 2rem; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h1>Proxyfail Attendance</h1>
+  <nav>
+    <a href="/">Home</a> • <a href="/student-dashboard">Student Dashboard</a>
+    <span id="user-info" style="margin-left: 1rem;">
+      <span id="user-label">User:</span> <span id="user-name"></span><span id="sep" class="hidden"> • </span><span id="user-email"></span><span id="course-sep" class="hidden"> • </span><span id="course-id"></span>
+    </span>
+  </nav>
+
+  <div id="auth-banner" style="margin-top: 1rem; padding: .75rem 1rem; background:#f5f7ff; border:1px solid #cdd6ff; border-radius: 6px;">
+    <strong>Status:</strong> <span id="banner-text">Waiting for emailId query parameter…</span>
+  </div>
+
+  <section id="home">
+    <h2>Welcome</h2>
+    <p>This is a minimal hosting placeholder for the attendance project.</p>
+  </section>
+
+  <section id="student-dashboard" class="hidden">
+    <h2>Student Dashboard</h2>
+    <p>If you see this page, hosting is working and routes are rewritten to index.html.</p>
+    
+    <!-- User Profile Information -->
+    <div id="user-profile" style="margin-top: 2rem; padding: 1rem; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px;">
+      <h3>User Profile Information</h3>
+      <div id="profile-details">
+        <p><strong>Name:</strong> <span id="profile-name">Loading...</span></p>
+        <p><strong>Email:</strong> <span id="profile-email">Loading...</span></p>
+        <p><strong>Role:</strong> <span id="profile-role">Loading...</span></p>
+        <p><strong>Course ID:</strong> <span id="profile-course">Loading...</span></p>
+        <p><strong>Account Created:</strong> <span id="profile-created">Loading...</span></p>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    function render() {
+      const path = location.pathname.replace(/\/$/, '');
+      document.getElementById('home').classList.add('hidden');
+      document.getElementById('student-dashboard').classList.add('hidden');
+      if (path === '' || path === '/') document.getElementById('home').classList.remove('hidden');
+      else if (path === '/student-dashboard') document.getElementById('student-dashboard').classList.remove('hidden');
+      else document.getElementById('home').classList.remove('hidden');
+    }
+    window.addEventListener('popstate', render);
+    render();
+  </script>
+
+  <!-- Firebase SDKs served by Firebase Hosting with auto-init config -->
+  <script src="/__/firebase/9.23.0/firebase-app-compat.js"></script>
+  <script src="/__/firebase/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="/__/firebase/init.js"></script>
+  <script>
+    const db = firebase.firestore();
+    const userInfo = document.getElementById('user-info');
+    const userNameEl = document.getElementById('user-name');
+    const userEmailEl = document.getElementById('user-email');
+    const courseIdEl = document.getElementById('course-id');
+    const bannerText = document.getElementById('banner-text');
+    const sepEl = document.getElementById('sep');
+    const courseSepEl = document.getElementById('course-sep');
+
+    loginBtn.addEventListener('click', async () => {
+      try {
+        // Try popup first; if it fails (e.g., in WebView), fall back to redirect
+        await auth.signInWithPopup(provider);
+      } catch (e) {
+        try {
+          await auth.signInWithRedirect(provider);
+        } catch (e2) {
+          alert('Sign-in failed: ' + (e2 && e2.message ? e2.message : e2));
+        }
+      }
+    });
+
+    logoutBtn.addEventListener('click', async () => {
+      try {
+        await auth.signOut();
+      } catch (e) {
+        alert('Sign-out failed: ' + (e && e.message ? e.message : e));
+      }
+    });
+
+    async function loadUserProfile(user) {
+      // Try doc keyed by UID; fall back to query by email
+      try {
+        const uidDoc = await db.collection('users').doc(user.uid).get();
+        if (uidDoc.exists) return uidDoc.data();
+        if (user.email) {
+          const q = await db.collection('users').where('email', '==', user.email).limit(1).get();
+          if (!q.empty) return q.docs[0].data();
+        }
+      } catch (e) {
+        console.warn('Failed to load user profile:', e);
+      }
+      return null;
+    }
+
+    function getQueryParam(name) {
+      const params = new URLSearchParams(window.location.search);
+      return params.get(name) || '';
+    }
+
+    async function fetchUserByEmail(email) {
+      const q = await db.collection('users').where('email', '==', email).limit(1).get();
+      if (q.empty) return null;
+      return q.docs[0].data();
+    }
+
+    (async function init() {
+      const emailParam = getQueryParam('emailId') || getQueryParam('email');
+      if (!emailParam) {
+        bannerText.textContent = 'Add ?emailId=<user@domain> to the URL to view user details.';
+        userNameEl.textContent = '';
+        userEmailEl.textContent = '';
+        courseIdEl.textContent = '';
+        sepEl.classList.add('hidden');
+        courseSepEl.classList.add('hidden');
+        return;
+      }
+
+      bannerText.textContent = `Loading profile for ${emailParam}…`;
+      try {
+        const profile = await fetchUserByEmail(emailParam);
+        if (!profile) {
+          bannerText.textContent = `No user found for ${emailParam}.`;
+          userNameEl.textContent = '';
+          userEmailEl.textContent = emailParam;
+          courseIdEl.textContent = '';
+          sepEl.classList.add('hidden');
+          courseSepEl.classList.add('hidden');
+          return;
+        }
+        const name = profile.name || 'Student';
+        const email = profile.email || emailParam;
+        const courseId = profile.courseId || profile.course_id || 'N/A';
+        const role = profile.role || 'Student';
+        
+        userNameEl.textContent = name;
+        userEmailEl.textContent = email;
+        courseIdEl.textContent = `Course: ${courseId}`;
+        sepEl.classList.remove('hidden');
+        courseSepEl.classList.remove('hidden');
+        bannerText.textContent = `Loaded profile: ${name} (${email}) - ${role} - Course: ${courseId}`;
+        
+        // Update detailed profile information
+        document.getElementById('profile-name').textContent = name;
+        document.getElementById('profile-email').textContent = email;
+        document.getElementById('profile-role').textContent = role;
+        document.getElementById('profile-course').textContent = courseId;
+        
+        // Format creation date
+        const createdAt = profile.createdAt;
+        let createdDate = 'Unknown';
+        if (createdAt) {
+          if (createdAt.toDate) {
+            // Firestore Timestamp
+            createdDate = createdAt.toDate().toLocaleDateString();
+          } else if (createdAt._seconds) {
+            // Firestore Timestamp object
+            createdDate = new Date(createdAt._seconds * 1000).toLocaleDateString();
+          } else if (typeof createdAt === 'string') {
+            // ISO string
+            createdDate = new Date(createdAt).toLocaleDateString();
+          }
+        }
+        document.getElementById('profile-created').textContent = createdDate;
+      } catch (e) {
+        console.error(e);
+        bannerText.textContent = 'Failed to load user profile. Check Firestore rules and network.';
+      }
+    })();
+  </script>
+</body>
+</html>
