@@ -1,0 +1,67 @@
+DATE: 01.11.2025
+TIME: 12:50 AM
+PROJECT NAME: beacon-only-project
+OBSERVATION #1
+======================================================================
+
+Attached Output SS
+Observation:
+between -30 to -50 or -60 ... Same room
+outside my room, the value is -80, -81...
+Corner of second room...max value -93, -95...does not go beyond that
+
+Conclusion?
+
+
+COPILOT:
+Good observations — you collected useful empirical RSSI numbers. Here’s a concise interpretation, a safe decision rule you can use in the app, and recommended next steps to make proximity-based attendance reliable.
+
+Short conclusion (based on your numbers)
+
+Same room (very near to moderate): RSSI ≈ -30 … -60 (close/proximate).
+=> Devices are usually within ~0.5–3 m depending on phone and orientation.
+Outside your room (door/wall between devices): RSSI ≈ -80 … -81 (far/weak).
+=> Signal drops a lot through walls; this typically means “not in the same immediate area.”
+Corner / adjacent room: RSSI ≈ -93 … -95 (very weak / near detection floor).
+=> This is effectively the limit of reliable detection in your environment (noise floor).
+What this means practically
+
+RSSI is highly environment- and device-dependent, but your measurements show a clear separation:
+“Close / same room” readings cluster around -30..-60.
+“Through walls / different room” readings cluster around -80..-95.
+That separation is good: it means RSSI is useful as a proximity heuristic in this environment — but it must be treated probabilistically and with smoothing/guardrails.
+Recommended production decision rule (conservative & practical)
+
+Require two independent signals before awarding attendance:
+Correct QR scan (you already have); AND
+Beacon proximity verification using smoothed RSSI.
+Example RSSI rule (start conservative, tune later):
+Accept if smoothed_RSSI ≥ -65 dBm AND at least 3 readings in a 5s window are ≥ -65.
+Reject (too far) if smoothed_RSSI < -80 dBm or if the median of N readings < -80.
+If smoothed_RSSI is between -80 and -65, mark as “uncertain” and require retry or a manual confirmation.
+Why these numbers? Your same-room data reach up to -60 and your through-wall numbers are around -80—so -65 is a safe, conservative threshold that reduces false accepts from adjacent rooms.
+Smoothing & stability (implementation suggestions)
+
+Don’t base a decision on a single RSSI:
+Use median of last N samples (N=5) OR
+Use an exponential moving average (EMA) with alpha 0.2–0.4, plus a consecutive-count requirement.
+Example (consecutive-count):
+Count successive readings >= -65; if count ≥ 3 within 5 seconds, accept.
+Reset count to 0 when reading < -80 (clearly far).
+Log raw + smoothed RSSI in UI for debugging so you can refine thresholds.
+Calibration & device variance
+
+Different phone models report different RSSI for the same distance. To improve accuracy:
+Calibrate teacher device: measure RSSI at 1 m and save it as “ref” (use as TxPower for distance formula).
+Or run a short calibration table (1 m, 2 m, 3 m) on representative student devices to adjust thresholds.
+If you can’t calibrate students, keep rules conservative (lean toward rejecting borderline readings).
+Operational recommendations
+
+Always pair RSSI check with QR scan (QR proves intent/authorization; RSSI proves proximity).
+Prefer multiple short scans (e.g., 3–5s windows) rather than one long scan to reduce battery and noise.
+Show a UI state: “Proximity: close / uncertain / far” so students understand why attendance may be rejected.
+Add remote telemetry (timestamp, smoothedRssi, rawSamples, device model) when debugging failures.
+If you want, I can:
+
+Add EMA + consecutive-reading logic to BeaconScanner and show raw vs smoothed RSSI and the current decision (close/near/far/uncertain) in the UI (small patch).
+Add a tiny calibration helper that records RSSI at 1 m on the teacher phone and stores it in prefs to be used as TxPower.

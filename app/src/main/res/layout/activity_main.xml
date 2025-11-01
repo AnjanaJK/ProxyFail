@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <Button
+        android:id="@+id/btnStartAdv"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Start Advertising" />
+
+    <Button
+        android:id="@+id/btnStopAdv"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Stop Advertising" />
+
+    <Button
+        android:id="@+id/btnStartScan"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Start Scanning" />
+
+    <Button
+        android:id="@+id/btnShowQr"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Show QR (Advertise + Display)" />
+
+    <Button
+        android:id="@+id/btnBleThenQr"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Scan (BLE → QR)" />
+
+    <Button
+        android:id="@+id/btnStopScan"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Stop Scanning" />
+
+    <ScrollView
+        android:id="@+id/svLog"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#111111"
+        android:padding="8dp">
+
+        <TextView
+            android:id="@+id/tvLog"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#00FF00"
+            android:textSize="12sp"
+            android:text="Logs:" />
+
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingTop="8dp">
+
+        <TextView
+            android:id="@+id/tvRawRssi"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Raw RSSI: -"
+            android:textColor="#FFFFFF" />
+
+        <TextView
+            android:id="@+id/tvSmoothedRssi"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Smoothed RSSI: -"
+            android:textColor="#FFFFFF" />
+
+        <TextView
+            android:id="@+id/tvProximity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Proximity: -"
+            android:textColor="#FFD54F"
+            android:textStyle="bold" />
+
+        <!-- Simple radar visualization -->
+        <com.proxyfail.app.RadarView
+            android:id="@+id/radarView"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:layout_marginTop="8dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingTop="6dp">
+
+            <Button
+                android:id="@+id/btnCalibrate"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="Calibrate (1m)" />
+
+            <Button
+                android:id="@+id/btnToggleTelemetry"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="Telemetry: OFF" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>

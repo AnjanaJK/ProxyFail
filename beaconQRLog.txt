@@ -1,0 +1,1 @@
+I want to add static qr in the Beacon2. The advertising device displays the QR and the Scanning device first checks the BLE advertising and then scans the QR. If the Scanning device is within the range of the Advertising device then only show success message else show failure message and any error logs in the display window. Got it?
