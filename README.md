@@ -18,3 +18,6 @@ Build & test: PASS — you ran the build locally and the screenshots show the ap
 Beacon-slider: noted you created it but reverted to the version without the slider — kept it out to avoid confusion.
 
 Iteration 1: complete. Everything we planned for iteration 1 (BLE-only app, scanning/advertising hardening, EMA+median logic, calibration, radar, telemetry file) is implemented.
+
+
+🍀Beacon-qr created >>> BLE + Static QR test
